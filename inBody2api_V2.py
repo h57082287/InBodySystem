@@ -10,20 +10,22 @@ import requests
 import time
 import os
 import threading
+import csv
 
 class windows:
     def __init__(self):
         self.getAdmin()
         self.root = tk.Tk()
-        self.root.title('圖片傳送器')
+        self.root.title('ACCUNIQ(24101)')
         self.root.geometry('500x300')
         self.file_path = ''
         self.repone ={}
+        self.DataList = []
         self.getData()
         self.stop = False
 
-        self.text1 = tk.Label(self.root,text='圖片傳送器',font=('Arial', 18))
-        self.text1.place(relx=0.4,rely=0.1)
+        self.text1 = tk.Label(self.root,text='ACCUNIQ(24101)',font=('Arial', 18))
+        self.text1.place(relx=0.35,rely=0.1)
 
         self.text2 = tk.Label(self.root,text='預設路徑:',font=('Arial', 18))
         self.text2.place(relx=0.1,rely=0.3)
@@ -87,13 +89,60 @@ class windows:
         except:
             self.data = {}
     
-    def sendToAPI(self,file,fileType):
-        send_data ={'token':'dad5ece51af754e71e3333fc909b6b3b32893e826a29960d335d1378704237db','type':fileType,'image':self.imgToBase64(file)}
+    def sendToAPI(self,file,fileType,arrayData=''):
+        send_data ={
+            'Token':'dad5ece51af754e71e3333fc909b6b3b32893e826a29960d335d1378704237db',
+            'Type':fileType,
+            'Image':self.imgToBase64(file),
+            'GymCode':'24101',
+            'MeasureDate':arrayData[2],
+            'MeasureTime':arrayData[3],
+            'Weight':arrayData[5],
+            'BodyMoisture':arrayData[17],
+            'Fat':arrayData[19],
+            'Protein':arrayData[20],
+            'BFM':arrayData[26],
+            'SMM':arrayData[31],
+            'BMI':arrayData[37],
+            'FatPercentage':arrayData[41],
+            'WHR':arrayData[45],
+            'VisceralLevel':arrayData[49],
+            'VisceralArea':arrayData[51],
+            'LeftArm':arrayData[55],
+            'RightArm':arrayData[58],
+            'LeftLeg':arrayData[61],
+            'RightLeg':arrayData[64],
+            'Body':arrayData[67],
+            'FatLeftArmWeight':arrayData[70],
+            'FatRightArmWeight':arrayData[73],
+            'FatLeftLegWeight':arrayData[76],
+            'FatRightLegWeight':arrayData[79],
+            'FatBodyWeight':arrayData[82],
+            'BodyType':arrayData[85],
+            'PhysicalAge':arrayData[86],
+            'BMR':arrayData[87],
+            'TDEE':arrayData[88],
+            'VisceralWeight':arrayData[90],
+            'DegreeOfObesity':arrayData[91],
+            'AC':arrayData[92],
+            'FitnessScore':arrayData[93],
+            'EdemaIndex':arrayData[96],
+            'WeightControl':arrayData[97],
+            'WeightControl':arrayData[98],
+            'WeightControl':arrayData[99],
+            'EdemaIndex':arrayData[100],
+            'MuscleLeftArmWeight':arrayData[105],
+            'MuscleRightArmWeight':arrayData[108],
+            'MuscleLeftLegWeight':arrayData[111],
+            'MuscleRightLegWeight':arrayData[114],
+            'MuscleBodyWieght':arrayData[117],
+            }
         r = requests.post('https://accuniq.eternalwtech.com/api/AccuniqRecord',data=send_data)
         self.repone = r.json()
-        print(r.status_code)
-        #self.outputFile(self.repone['data'])
-        print(self.repone)
+        try:
+            self.outputFile(self.repone['data']['img'])
+        except:
+            self.text4.configure(text='<<<上傳失敗>>>')
         time.sleep(1)
     
     def imgToBase64(self,file_path):
@@ -126,11 +175,15 @@ class windows:
             fileList = os.listdir(self.file_path)
             for file in fileList:
                 print(file)
-                if ('jpg' or 'png') in file:
+                if (file.find('jpg') != -1 or file.find('png') != -1):
                     self.text4.configure(text='檢測到新檔，傳送中...')
                     finalPath = self.file_path+'\\'+file
-                    self.sendToAPI(finalPath,file.split('.')[1])
+                    csvPath = self.file_path + '\\' + file.split('.')[0].replace('_1','') + '.csv'
+                    time.sleep(5)
+                    self.getCSV(csvPath)
+                    self.sendToAPI(finalPath,file.split('.')[1],self.DataList)
                     os.remove(finalPath)
+                    os.remove(csvPath)
                     self.text4.configure(text='~傳送完成~')
             if self.stop == True:
                 break
@@ -144,7 +197,12 @@ class windows:
     
     def stopApp(self):
         os._exit(0)
-
+    
+    def getCSV(self,csvname):
+        with open(csvname,'r+',encoding='big5') as csvFile:
+            csvData = csv.reader(csvFile)
+            self.DataList = list(csvData)[0]
+            print(self.DataList)
 
 if __name__ == '__main__':
     f = windows()
