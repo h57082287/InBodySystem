@@ -20,6 +20,7 @@ class windows:
         self.file_path = ''
         self.repone ={}
         self.getData()
+        self.stop = False
 
         self.text1 = tk.Label(self.root,text='圖片傳送器',font=('Arial', 18))
         self.text1.place(relx=0.4,rely=0.1)
@@ -44,12 +45,17 @@ class windows:
         self.text4 = tk.Label(self.root,text='',font=('Arial', 18))
         self.text4.place(relx=0.4,rely=0.5)
 
-        self.okBtn = tk.Button(self.root,font=('Arial', 18),text='開始傳送',command=self.btnClick)
-        self.okBtn.place(relx=0.3,rely=0.8)
+        self.okBtn = tk.Button(self.root,font=('Arial', 18),text='開始監控',command=self.btnClick)
+        self.okBtn.place(relx=0.1,rely=0.8)
 
         self.changeBtn = tk.Button(self.root,font=('Arial', 18),text='重選目錄',command=self.btn2Click)
-        self.changeBtn.place(relx=0.6,rely=0.8)
+        self.changeBtn.place(relx=0.4,rely=0.8)
 
+        self.chenalBtn = tk.Button(self.root,font=('Arial', 18),text='停止監控',command=self.btn3Click)
+        self.chenalBtn.place(relx=0.7,rely=0.8)
+        self.chenalBtn.configure(state='disable')
+
+        self.root.protocol('WM_DELETE_WINDOW',self.stopApp)
         self.root.mainloop()
     
     # 函數定義區
@@ -81,13 +87,13 @@ class windows:
         except:
             self.data = {}
     
-    def sendToAPI(self,file):
-        print(1)
-        send_data ={'token':'dad5ece51af754e71e3333fc909b6b3b32893e826a29960d335d1378704237db','type':'jpg','image':self.imgToBase64(file)}
-        print(2)
-        r = requests.post('https://v3.eternalwtech.com/api/upload-image',data=send_data)
+    def sendToAPI(self,file,fileType):
+        send_data ={'token':'dad5ece51af754e71e3333fc909b6b3b32893e826a29960d335d1378704237db','type':fileType,'image':self.imgToBase64(file)}
+        r = requests.post('https://accuniq.eternalwtech.com/api/AccuniqRecord',data=send_data)
         self.repone = r.json()
-        self.outputFile(self.repone['data'])
+        print(r.status_code)
+        #self.outputFile(self.repone['data'])
+        print(self.repone)
         time.sleep(1)
     
     def imgToBase64(self,file_path):
@@ -99,6 +105,7 @@ class windows:
     def btnClick(self):
         self.okBtn.configure(state='disable')
         self.changeBtn.configure(state='disable')
+        self.chenalBtn.configure(state='normal')
         t = threading.Thread(target=self.startSend)
         t.start()
     
@@ -114,17 +121,29 @@ class windows:
         self.text3.configure(text=self.data['path'])
 
     def startSend(self):
-        fileList = os.listdir(self.file_path)
-        i = 1
-        for file in fileList:
-            self.text4.configure(text='第'+str(i)+'張傳送中...')
-            finalPath = self.file_path+'\\'+file
-            self.sendToAPI(finalPath)
-            os.remove(finalPath)
-            i+=1
-        self.text4.configure(text='~傳送完成~')
+        while True:
+            time.sleep(1)
+            fileList = os.listdir(self.file_path)
+            for file in fileList:
+                print(file)
+                if ('jpg' or 'png') in file:
+                    self.text4.configure(text='檢測到新檔，傳送中...')
+                    finalPath = self.file_path+'\\'+file
+                    self.sendToAPI(finalPath,file.split('.')[1])
+                    os.remove(finalPath)
+                    self.text4.configure(text='~傳送完成~')
+            if self.stop == True:
+                break
+        self.stop = False
+    
+    def btn3Click(self):
+        self.stop = True
         self.okBtn.configure(state='normal')
         self.changeBtn.configure(state='normal')
+        self.chenalBtn.configure(state='disable')
+    
+    def stopApp(self):
+        os._exit(0)
 
 
 if __name__ == '__main__':
