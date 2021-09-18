@@ -94,10 +94,14 @@ class windows:
             'Token':'dad5ece51af754e71e3333fc909b6b3b32893e826a29960d335d1378704237db',
             'Type':fileType,
             'Image':self.imgToBase64(file),
-            'GymCode':'24101',
+            'GymCode+RandomNo':'24101+8888',
+            'ID':arrayData[1],
             'MeasureDate':arrayData[2],
             'MeasureTime':arrayData[3],
+            'Height':arrayData[4],
             'Weight':arrayData[5],
+            'Age':arrayData[6],
+            'Gender':arrayData[7],
             'BodyMoisture':arrayData[17],
             'Fat':arrayData[19],
             'Protein':arrayData[20],
@@ -139,6 +143,7 @@ class windows:
             }
         r = requests.post('https://accuniq.eternalwtech.com/api/AccuniqRecord',data=send_data)
         self.repone = r.json()
+        #print(self.repone)
         try:
             self.outputFile(self.repone['data']['img'])
         except:
@@ -174,7 +179,7 @@ class windows:
             time.sleep(1)
             fileList = os.listdir(self.file_path)
             for file in fileList:
-                print(file)
+                #print(file)
                 if (file.find('jpg') != -1 or file.find('png') != -1):
                     self.text4.configure(text='檢測到新檔，傳送中...')
                     finalPath = self.file_path+'\\'+file
@@ -202,7 +207,11 @@ class windows:
         with open(csvname,'r+',encoding='big5') as csvFile:
             csvData = csv.reader(csvFile)
             self.DataList = list(csvData)[0]
-            print(self.DataList)
+            if(self.DataList[7] == '男'):
+                self.DataList[7] = 1
+            elif(self.DataList[7] == '女'):
+                self.DataList[7] = 2
+            #print(self.DataList)
 
 if __name__ == '__main__':
     f = windows()
