@@ -1,7 +1,9 @@
 from __future__ import print_function
 from os import times
 import tkinter as tk
+import tkinter
 from tkinter import filedialog
+from tkinter import messagebox
 import base64
 import json
 import ctypes, sys
@@ -11,25 +13,43 @@ import time
 import os
 import threading
 import csv
+import win32com.client
 
 class windows:
     def __init__(self):
-        self.getAdmin()
+        #self.getAdmin()
         self.root = tk.Tk()
-        self.root.title('ACCUNIQ(24101)')
+        self.root.title('ACCUNIQ')
         self.root.geometry('500x300')
         self.file_path = ''
+        self.executepath = os.path.expanduser("~") + "\\Desktop\\ACCUNIQ"
         self.repone ={}
         self.DataList = []
         self.getData()
         self.stop = False
 
-        self.text1 = tk.Label(self.root,text='ACCUNIQ(24101)',font=('Arial', 18))
+        self.text1 = tk.Label(self.root,text='ACCUNIQ',font=('Arial', 18))
         self.text1.place(relx=0.35,rely=0.1)
 
         self.text2 = tk.Label(self.root,text='預設路徑:',font=('Arial', 18))
         self.text2.place(relx=0.1,rely=0.3)
-
+        
+        # 建立排程檢查
+        try:
+            if self.data['task'] != True:
+                #self.getAdmin()
+                print(os.getcwd())
+                #os.system("schtasks /create /tn ACCUNIQControl /tr "+ os.getcwd() +"\\ACCUNIQ(24101).exe /sc ONSTART /ru System")
+                self.createShortCut(os.path.expanduser("~") + "\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup",os.getcwd() + "\\ACCUNIQ_24101.exe")
+        except:
+            self.data['task'] = True
+            self.setData()
+            self.getData()
+            #self.getAdmin()
+            #os.system("schtasks /create /tn ACCUNIQControl /tr "+ os.getcwd() +"\\ACCUNIQ(24101).exe /sc ONSTART /ru System")
+            self.createShortCut(os.path.expanduser("~") + "\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup",os.getcwd() + "\\ACCUNIQ_24101.exe")
+            
+        # 建立路徑檢查
         try:
             if self.data['path'] != '':
                 self.text3 = tk.Label(self.root,text=self.data['path'],font=('Arial', 12))
@@ -37,11 +57,16 @@ class windows:
             else:
                 raise TypeError("Error")
         except:
-            self.file_path = filedialog.askdirectory()
+            try:
+                self.file_path = os.path.expanduser("~") + "\\Desktop\\accuniqApi"
+            except:
+                pass
             self.data['path'] = self.file_path
             self.setData()
             self.getData()
+        
             self.text3 = tk.Label(self.root,text=self.data['path'],font=('Arial', 12))
+        
         self.text3.place(relx=0.4,rely=0.3)
 
         self.text4 = tk.Label(self.root,text='',font=('Arial', 18))
@@ -58,9 +83,27 @@ class windows:
         self.chenalBtn.configure(state='disable')
 
         self.root.protocol('WM_DELETE_WINDOW',self.stopApp)
+
+        self.root.tk.call('package', 'require', 'Winico')
+        icon = self.root.tk.call('winico', 'createfrom', self.executepath + '\\avvji-bcalw-001.ico')  # 这里说一下xxx.ico 就是你要显示在托盘上的小图标
+        self.root.tk.call('winico', 'taskbar', 'add', icon,
+            '-callback', (self.root.register(self.menu_func), '%m', '%x', '%y'),
+            '-pos', 0,
+            '-text', u'accuniq發送器')
+        self.menu = tk.Menu(self.root, tearoff=0)
+        self.menu.add_command(label=u'顯示畫面', command=self.root.deiconify)
+        self.menu.add_command(label=u'退出', command=self.stopApp)
+        self.root.withdraw()
+        self.btnClick()
         self.root.mainloop()
     
     # 函數定義區
+    def menu_func(self,event, x, y):
+        if event == 'WM_RBUTTONDOWN':    # 监听右击事件
+            self.menu.tk_popup(x, y) #弹出菜单
+        if event == 'WM_LBUTTONDOWN':   #左 事件  还有其他的如 WM_LBUTTONDBLCLK 左双击
+            self.root.deiconify() #显示主页面
+
     def is_admin(self):
         try:
             return ctypes.windll.shell32.IsUserAnAdmin()
@@ -76,15 +119,16 @@ class windows:
     
     def setData(self):
         try:
-            with open('temp.json','w') as f:
+            with open(self.executepath + '\\temp.json','w') as f:
                 f.write(json.dumps(self.data))
         except:
-            self.getAdmin()
-            self.setData()
+            messagebox.showerror("錯誤提示","請確認任您的軟體資料夾路徑為\n" + self.executepath + "\n，詳情請見說明文件!!!")
+            os._exit(0)
+            
 
     def getData(self):
         try:
-            with open('temp.json','r') as f:
+            with open(self.executepath + '\\temp.json','r') as f:
                 self.data = json.load(f)
         except:
             self.data = {}
@@ -94,7 +138,7 @@ class windows:
             'Token':'dad5ece51af754e71e3333fc909b6b3b32893e826a29960d335d1378704237db',
             'Type':fileType,
             'Image':self.imgToBase64(file),
-            'GymCode+RandomNo':'24101+8888',
+            'GymCode+RandomNo':arrayData[0],
             'ID':arrayData[1],
             'MeasureDate':arrayData[2],
             'MeasureTime':arrayData[3],
@@ -141,9 +185,10 @@ class windows:
             'MuscleRightLegWeight':arrayData[114],
             'MuscleBodyWieght':arrayData[117],
             }
+        print(send_data)
         r = requests.post('https://accuniq.eternalwtech.com/api/AccuniqRecord',data=send_data)
         self.repone = r.json()
-        #print(self.repone)
+        print(self.repone)
         try:
             self.outputFile(self.repone['data']['img'])
         except:
@@ -164,7 +209,7 @@ class windows:
         t.start()
     
     def outputFile(self,data):
-        with open('output.txt','a') as f:
+        with open(self.executepath + '\\output.txt','a') as f:
             f.write(data+'\n')
     
     def btn2Click(self):
@@ -177,19 +222,38 @@ class windows:
     def startSend(self):
         while True:
             time.sleep(1)
-            fileList = os.listdir(self.file_path)
+            try:
+                fileList = os.listdir(self.file_path)
+            except FileNotFoundError:
+                os.makedirs(os.path.expanduser("~") + "\\Desktop\\accuniqApi")
+                continue
             for file in fileList:
                 #print(file)
                 if (file.find('jpg') != -1 or file.find('png') != -1):
                     self.text4.configure(text='檢測到新檔，傳送中...')
+                    self.text4.place(relx=0.25,rely=0.5)
                     finalPath = self.file_path+'\\'+file
                     csvPath = self.file_path + '\\' + file.split('.')[0].replace('_1','') + '.csv'
                     time.sleep(5)
-                    self.getCSV(csvPath)
-                    self.sendToAPI(finalPath,file.split('.')[1],self.DataList)
+                    try:
+                        self.getCSV(csvPath)
+                        self.sendToAPI(finalPath,file.split('.')[1],self.DataList)
+                    except requests.exceptions.ConnectionError:
+                        messagebox.showerror("網路錯誤", "請檢查您的網路連線是否正常!!!")
+                        continue
+                    except:
+                        self.text4.configure(text='~傳送異常(檔案不完全)~')
+                        self.text4.place(relx=0.25,rely=0.5)
+                        try:
+                            os.remove(finalPath)
+                            os.remove(csvPath)
+                        except:
+                            pass
+                        continue
                     os.remove(finalPath)
                     os.remove(csvPath)
                     self.text4.configure(text='~傳送完成~')
+                    self.text4.place(relx=0.4,rely=0.5)
             if self.stop == True:
                 break
         self.stop = False
@@ -201,7 +265,11 @@ class windows:
         self.chenalBtn.configure(state='disable')
     
     def stopApp(self):
-        os._exit(0)
+        ans = messagebox.askyesno("結束確認","請問是否結束應用?\n是:立即停止並退出\n否:繼續執行並最小化")
+        if ans == True:
+            os._exit(0)
+        else:
+            self.root.withdraw()
     
     def getCSV(self,csvname):
         with open(csvname,'r+',encoding='big5') as csvFile:
@@ -212,6 +280,13 @@ class windows:
             elif(self.DataList[7] == '女'):
                 self.DataList[7] = 2
             #print(self.DataList)
+
+    def createShortCut(self,ShortCutpath,targetpath):
+        execute = win32com.client.Dispatch("wscript.shell")
+        shortcut = execute.CreateShortCut(ShortCutpath + "\\ACCUNIQ_24101.lnk")
+        shortcut.Targetpath= targetpath
+        shortcut.save()
+
 
 if __name__ == '__main__':
     f = windows()
