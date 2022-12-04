@@ -227,33 +227,32 @@ class windows:
             except FileNotFoundError:
                 os.makedirs(os.path.expanduser("~") + "\\Desktop\\accuniqApi")
                 continue
+            csvFileList = []
+            ImageFileList = []
             for file in fileList:
-                #print(file)
+                self.text4.configure(text='檢測到新檔，辨識中...')
+                self.text4.place(relx=0.25,rely=0.5)
                 if (file.find('jpg') != -1 or file.find('png') != -1):
-                    self.text4.configure(text='檢測到新檔，傳送中...')
+                    ImageFileList.append(self.file_path + '\\' + file)
+                elif (file.find('csv') != -1):
+                    csvFileList.append(self.file_path + '\\' +file)
+            for idx in range(len(ImageFileList)):
+                QFile = ImageFileList[idx].split(".")[0].replace("_1","") + ".csv"
+                if (QFile) in csvFileList :
+                    self.text4.configure(text='辨識已完成，傳送中...')
                     self.text4.place(relx=0.25,rely=0.5)
-                    finalPath = self.file_path+'\\'+file
-                    csvPath = self.file_path + '\\' + file.split('.')[0].replace('_1','') + '.csv'
-                    time.sleep(5)
+                    self.getCSV(QFile)
                     try:
-                        self.getCSV(csvPath)
-                        self.sendToAPI(finalPath,file.split('.')[1],self.DataList)
+                        self.sendToAPI(ImageFileList[idx],ImageFileList[idx].split('.')[1],self.DataList)
+                        os.remove(QFile)
+                        os.remove(ImageFileList[idx])
                     except requests.exceptions.ConnectionError:
                         messagebox.showerror("網路錯誤", "請檢查您的網路連線是否正常!!!")
                         continue
-                    except:
-                        self.text4.configure(text='~傳送異常(檔案不完全)~')
-                        self.text4.place(relx=0.25,rely=0.5)
-                        try:
-                            os.remove(finalPath)
-                            os.remove(csvPath)
-                        except:
-                            pass
-                        continue
-                    os.remove(finalPath)
-                    os.remove(csvPath)
-                    self.text4.configure(text='~傳送完成~')
-                    self.text4.place(relx=0.4,rely=0.5)
+            csvFileList = None
+            ImageFileList = None
+            self.text4.configure(text='~系統就緒~')
+            self.text4.place(relx=0.4,rely=0.5)
             if self.stop == True:
                 break
         self.stop = False
